@@ -100,7 +100,7 @@ predictionProbability = metrics.auc(fpr, tpr)
 mTest = 0 #number of images in the test set
 lilTestMatrix = lil_matrix((mTest, desiredDimensions[0] * desiredDimensions[1]))
 
-for i in range(mTest):
+for i in range(1, mTest):
     lilTestMatrix[i, :] = preprocessImg(animalInput('printNothing'), i, desiredDimensions[0], desiredDimensions[1], dataTestDir)
 
 pca = RandomizedPCA(n_components=150, whiten = True)
@@ -108,6 +108,7 @@ testMatrixReduced = pca.fit_transform(lilTestMatrix, y = componentIdx)
 
 #Prediction
 predictionFromTest = clf.predict_proba(testMatrixReduced)
+predictionFromTest = np.append(range(1, mTest), predictionFromTest[:, 1], axis = 1)
 
 import csv
 
