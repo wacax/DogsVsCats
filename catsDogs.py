@@ -41,7 +41,7 @@ mTest = 12500 #number of images in the test set
 indexesIm = np.random.permutation(m * len(labels) + len(labels))
 idxImages = np.tile(range(m + 1), len(labels))
 idxImages = idxImages[indexesIm]
-testIndexes = range(len(indexesIm), len(indexesIm) + mTest)
+testIndexes = range(len(indexesIm) - 1, len(indexesIm) + mTest)
 y = np.append(np.tile(0, m + 1), np.tile(1, m + 1))
 y = y[indexesIm]
 
@@ -54,16 +54,13 @@ def animalInput(theNumber):
         return ''
 
 #Build the sparse matrix with the preprocessed image data for both train and test data
-bigMatrix = lil_matrix((m * len(labels) + 2 + mTest, desiredDimensions[0] * desiredDimensions[1]))
+bigMatrix = lil_matrix((len(indexesIm) + len(testIndexes), desiredDimensions[0] * desiredDimensions[1]))
 
-for i in range(m * len(labels)):
+for i in range(len(indexesIm)):
     bigMatrix[i, :] = preprocessImg(animalInput(y[i]), idxImages[i], desiredDimensions[0], desiredDimensions[1], dataTrainDir)
 
-#Build the sparse matrix with the preprocessed image data
-lilTestMatrix = lil_matrix((mTest, desiredDimensions[0] * desiredDimensions[1]))
-
-for i in range(1, mTest):
-    lilTestMatrix[i, :] = preprocessImg(animalInput('printNothing'), i, desiredDimensions[0], desiredDimensions[1], dataTestDir)
+for i in range(1, mTest + 1):
+    bigMatrix[testIndexes[i], :] = preprocessImg(animalInput('printNothing'), i, desiredDimensions[0], desiredDimensions[1], dataTestDir)
 
 #Transform to csr matrix
 bigMatrix = bigMatrix.tocsr()
