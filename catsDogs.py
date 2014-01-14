@@ -106,6 +106,10 @@ for i in range(1, mTest):
 pca = RandomizedPCA(n_components=150, whiten = True)
 testMatrixReduced = pca.fit_transform(lilTestMatrix, y = componentIdx)
 
+#Train the model
+clf = svm.SVC(probability = True, verbose = True)
+clf.fit(trainMatrixReduced, y)
+
 #Prediction
 predictionFromTest = clf.predict_proba(testMatrixReduced)
 predictionFromTest = np.append(range(1, mTest), predictionFromTest[:, 1], axis = 1)
