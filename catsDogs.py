@@ -112,14 +112,18 @@ clf.fit(trainMatrixReduced, y)
 
 #Prediction
 predictionFromTest = clf.predict_proba(testMatrixReduced)
-predictionFromTest = np.append(range(1, mTest), predictionFromTest[:, 1], axis = 1)
+label = predictionFromTest[:, 1]
+id = range(1, mTest)
+
+predictionsToCsv = np.column_stack((id, label))
+
 
 import csv
 
 ofile = open('predictionI.csv', "wb")
 fileToBeWritten = csv.writer(ofile, delimiter='\t', quotechar='"', quoting=csv.QUOTE_ALL)
 
-for row in predictionFromTest:
+for row in predictionsToCsv:
     fileToBeWritten.writerow(row)
 
 ofile.close()
