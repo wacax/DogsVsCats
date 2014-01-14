@@ -59,8 +59,9 @@ bigMatrix = lil_matrix((len(indexesIm) + len(testIndexes), desiredDimensions[0] 
 for i in range(len(indexesIm)):
     bigMatrix[i, :] = preprocessImg(animalInput(y[i]), idxImages[i], desiredDimensions[0], desiredDimensions[1], dataTrainDir)
 
-for i in range(1, mTest + 1):
-    bigMatrix[testIndexes[i], :] = preprocessImg(animalInput('printNothing'), i, desiredDimensions[0], desiredDimensions[1], dataTestDir)
+derp = range(1, (mTest + 1))
+for ii in derp:
+    bigMatrix[testIndexes[ii], :] = preprocessImg(animalInput('printNothing'), ii, desiredDimensions[0], desiredDimensions[1], dataTestDir)
 
 #Transform to csr matrix
 bigMatrix = bigMatrix.tocsr()
