@@ -56,6 +56,8 @@ lilTrainMatrix = lil_matrix((m * len(labels), desiredDimensions[0] * desiredDime
 for i in range(m * len(labels)):
     lilTrainMatrix[i, :] = preprocessImg(animalInput(y[i]), idxImages[i], desiredDimensions[0], desiredDimensions[1], dataTrainDir)
 
+lilTrainMatrix = lilTrainMatrix.tocsr()
+
 #Reduce features to main components so that they contain 99% of variance
 pca = RandomizedPCA(n_components=150, whiten = True)
 pca.fit(lilTrainMatrix)
@@ -102,6 +104,8 @@ lilTestMatrix = lil_matrix((mTest, desiredDimensions[0] * desiredDimensions[1]))
 
 for i in range(1, mTest):
     lilTestMatrix[i, :] = preprocessImg(animalInput('printNothing'), i, desiredDimensions[0], desiredDimensions[1], dataTestDir)
+
+lilTestMatrix = lilTestMatrix.tocsr()
 
 pca = RandomizedPCA(n_components=150, whiten = True)
 testMatrixReduced = pca.fit_transform(lilTestMatrix, y = componentIdx)
