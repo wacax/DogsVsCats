@@ -56,11 +56,25 @@ lilTrainMatrix = lil_matrix((m * len(labels), desiredDimensions[0] * desiredDime
 for i in range(m * len(labels)):
     lilTrainMatrix[i, :] = preprocessImg(animalInput(y[i]), idxImages[i], desiredDimensions[0], desiredDimensions[1], dataTrainDir)
 
-lilTrainMatrix = lilTrainMatrix.tocsr()
+#Transform to csr matrix
+lilTrainMatrix.tocsr()
+
+#Build the sparse matrix with the preprocessed image data
+mTest = 12500 #number of images in the test set
+lilTestMatrix = lil_matrix((mTest, desiredDimensions[0] * desiredDimensions[1]))
+
+for i in range(1, mTest):
+    lilTestMatrix[i, :] = preprocessImg(animalInput('printNothing'), i, desiredDimensions[0], desiredDimensions[1], dataTestDir)
+
+#Transform to csr matrix
+lilTestMatrix.tocsr()
+
+#Create one big matrix
+bigMatrix = np.vstack((lilTrainMatrix, lilTestMatrix))
 
 #Reduce features to main components so that they contain 99% of variance
 pca = RandomizedPCA(n_components=150, whiten = True)
-pca.fit(lilTrainMatrix)
+pca.fit(bigMatrix)
 varianceExplained = pca.explained_variance_ratio_
 print(pca.explained_variance_ratio_)
 
@@ -72,7 +86,11 @@ for ii in range(len(varianceExplained)):
         break
 
 pca = RandomizedPCA(n_components=150, whiten = True)
-trainMatrixReduced = pca.fit_transform(lilTrainMatrix, y = componentIdx)
+BigMatrixReduced = pca.fit_transform(bigMatrix, y = componentIdx)
+
+#Divide train Matrix and Test Matrix (or which I don't have labels)
+trainMatrixReduced = BigMatrixReduced[0:2*m, :]
+testMatrixReduced = BigMatrixReduced[BigMatrixReduced.shape[0] - mTest : BigMatrixReduced.shape[0], :]
 
 #Divide dataset for cross validation purposes
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(
@@ -98,17 +116,7 @@ fpr, tpr, thresholds = metrics.roc_curve(y_test, predictionFromDataset2)
 predictionProbability = metrics.auc(fpr, tpr)
 
 #Predict images from the test set
-#Build the sparse matrix with the preprocessed image data
-mTest = 12500 #number of images in the test set
-lilTestMatrix = lil_matrix((mTest, desiredDimensions[0] * desiredDimensions[1]))
 
-for i in range(1, mTest):
-    lilTestMatrix[i, :] = preprocessImg(animalInput('printNothing'), i, desiredDimensions[0], desiredDimensions[1], dataTestDir)
-
-lilTestMatrix = lilTestMatrix.tocsr()
-
-pca = RandomizedPCA(n_components=150, whiten = True)
-testMatrixReduced = pca.fit_transform(lilTestMatrix, y = componentIdx)
 
 #Train the model with full data set
 clf = svm.SVC(probability = True, verbose = True)
@@ -122,8 +130,6 @@ idVector = range(1, mTest + 1)
 
 #predictionsToCsv = np.column_stack((idVector, label))
 predictionsToCsv = np.column_stack((idVector, predictionFromTest))
-
-
 
 import csv
 
