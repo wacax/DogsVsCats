@@ -106,7 +106,7 @@ for i in range(1, mTest):
 pca = RandomizedPCA(n_components=150, whiten = True)
 testMatrixReduced = pca.fit_transform(lilTestMatrix, y = componentIdx)
 
-#Train the model
+#Train the model with full data set
 clf = svm.SVC(probability = True, verbose = True)
 clf.fit(trainMatrixReduced, y)
 
