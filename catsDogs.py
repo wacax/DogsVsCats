@@ -33,13 +33,16 @@ def preprocessImg(animal, number, dim1, dim2, dataDir):
     npImage = cv2.resize(npImage, (dim1, dim2))
     return(npImage.reshape(1, dim1 * dim2))
 
-#m = 5000 #pet dataset
-m = 12499 #full dataset
+#m = 5000 #pet Train dataset
+m = 12499 #full Train dataset
+mTest = 12500 #number of images in the test set
 
-indexesIm = np.random.permutation(m * len(labels))
-idxImages = np.tile(range(m), len(labels))
+
+indexesIm = np.random.permutation(m * len(labels) + len(labels))
+idxImages = np.tile(range(m + 1), len(labels))
 idxImages = idxImages[indexesIm]
-y = np.append(np.tile(0, m), np.tile(1, m))
+testIndexes = range(len(indexesIm), len(indexesIm) + mTest)
+y = np.append(np.tile(0, m + 1), np.tile(1, m + 1))
 y = y[indexesIm]
 
 def animalInput(theNumber):
@@ -50,27 +53,20 @@ def animalInput(theNumber):
     else:
         return ''
 
-#Build the sparse matrix with the preprocessed image data
-lilTrainMatrix = lil_matrix((m * len(labels), desiredDimensions[0] * desiredDimensions[1]))
+#Build the sparse matrix with the preprocessed image data for both train and test data
+bigMatrix = lil_matrix((m * len(labels) + 2 + mTest, desiredDimensions[0] * desiredDimensions[1]))
 
 for i in range(m * len(labels)):
-    lilTrainMatrix[i, :] = preprocessImg(animalInput(y[i]), idxImages[i], desiredDimensions[0], desiredDimensions[1], dataTrainDir)
-
-#Transform to csr matrix
-lilTrainMatrix.tocsr()
+    bigMatrix[i, :] = preprocessImg(animalInput(y[i]), idxImages[i], desiredDimensions[0], desiredDimensions[1], dataTrainDir)
 
 #Build the sparse matrix with the preprocessed image data
-mTest = 12500 #number of images in the test set
 lilTestMatrix = lil_matrix((mTest, desiredDimensions[0] * desiredDimensions[1]))
 
 for i in range(1, mTest):
     lilTestMatrix[i, :] = preprocessImg(animalInput('printNothing'), i, desiredDimensions[0], desiredDimensions[1], dataTestDir)
 
 #Transform to csr matrix
-lilTestMatrix.tocsr()
-
-#Create one big matrix
-bigMatrix = np.vstack((lilTrainMatrix, lilTestMatrix))
+bigMatrix = bigMatrix.tocsr()
 
 #Reduce features to main components so that they contain 99% of variance
 pca = RandomizedPCA(n_components=150, whiten = True)
@@ -88,9 +84,9 @@ for ii in range(len(varianceExplained)):
 pca = RandomizedPCA(n_components=150, whiten = True)
 BigMatrixReduced = pca.fit_transform(bigMatrix, y = componentIdx)
 
-#Divide train Matrix and Test Matrix (or which I don't have labels)
+#Divide train Matrix and Test Matrix (for which I don't have labels)
 trainMatrixReduced = BigMatrixReduced[0:2*m, :]
-testMatrixReduced = BigMatrixReduced[BigMatrixReduced.shape[0] - mTest : BigMatrixReduced.shape[0], :]
+testMatrixReduced = BigMatrixReduced[BigMatrixReduced.shape[0] - mTest:BigMatrixReduced.shape[0], :]
 
 #Divide dataset for cross validation purposes
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(
