@@ -97,7 +97,7 @@ predictionProbability = metrics.auc(fpr, tpr)
 
 #Predict images from the test set
 #Build the sparse matrix with the preprocessed image data
-mTest = 0 #number of images in the test set
+mTest = 12500 #number of images in the test set
 lilTestMatrix = lil_matrix((mTest, desiredDimensions[0] * desiredDimensions[1]))
 
 for i in range(1, mTest):
