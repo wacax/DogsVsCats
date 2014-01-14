@@ -111,17 +111,20 @@ clf = svm.SVC(probability = True, verbose = True)
 clf.fit(trainMatrixReduced, y)
 
 #Prediction
-predictionFromTest = clf.predict_proba(testMatrixReduced)
-label = predictionFromTest[:, 1]
-id = range(1, mTest)
+#predictionFromTest = clf.predict_proba(testMatrixReduced)
+predictionFromTest = clf.predict(testMatrixReduced)
+#label = predictionFromTest[:, 1]
+idVector = range(1, mTest + 1)
 
-predictionsToCsv = np.column_stack((id, label))
+#predictionsToCsv = np.column_stack((idVector, label))
+predictionsToCsv = np.column_stack((idVector, predictionFromTest))
+
 
 
 import csv
 
 ofile = open('predictionI.csv', "wb")
-fileToBeWritten = csv.writer(ofile, delimiter='\t', quotechar='"', quoting=csv.QUOTE_ALL)
+fileToBeWritten = csv.writer(ofile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
 
 for row in predictionsToCsv:
     fileToBeWritten.writerow(row)
