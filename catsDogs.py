@@ -34,15 +34,15 @@ def preprocessImg(animal, number, dim1, dim2, dataDir):
     return(npImage.reshape(1, dim1 * dim2))
 
 #m = 5000 #pet Train dataset
-m = 12499 #full Train dataset
+m = 12500 #full Train dataset
 mTest = 12500 #number of images in the test set
 
 
-indexesIm = np.random.permutation(m * len(labels) + len(labels))
-idxImages = np.tile(range(m + 1), len(labels))
+indexesIm = np.random.permutation(m * len(labels))
+idxImages = np.tile(range(m), len(labels))
 idxImages = idxImages[indexesIm]
 testIndexes = range(len(indexesIm), len(indexesIm) + mTest)
-y = np.append(np.tile(0, m + 1), np.tile(1, m + 1))
+y = np.append(np.tile(0, m), np.tile(1, m))
 y = y[indexesIm]
 
 def animalInput(theNumber):
@@ -59,7 +59,8 @@ bigMatrix = lil_matrix((len(indexesIm) + len(testIndexes), desiredDimensions[0] 
 for i in range(len(indexesIm)):
     bigMatrix[i, :] = preprocessImg(animalInput(y[i]), idxImages[i], desiredDimensions[0], desiredDimensions[1], dataTrainDir)
 
-for ii in range(mTest):
+someNumbers = range(mTest)
+for ii in someNumbers:
     bigMatrix[testIndexes[ii], :] = preprocessImg(animalInput('printNothing'), ii + 1, desiredDimensions[0], desiredDimensions[1], dataTestDir)
 
 #Transform to csr matrix
@@ -82,12 +83,12 @@ pca = RandomizedPCA(n_components=150, whiten = True)
 BigMatrixReduced = pca.fit_transform(bigMatrix, y = componentIdx)
 
 #Divide train Matrix and Test Matrix (for which I don't have labels)
-trainMatrixReduced = BigMatrixReduced[0:2*m, :]
-testMatrixReduced = BigMatrixReduced[BigMatrixReduced.shape[0] - mTest:BigMatrixReduced.shape[0], :]
+trainMatrixReduced = BigMatrixReduced[0:max(indexesIm), :]
+testMatrixReduced = BigMatrixReduced[testIndexes[0]:BigMatrixReduced.shape[0], :]
 
 #Divide dataset for cross validation purposes
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(
-    trainMatrixReduced, y, test_size=0.4, random_state=0)
+    trainMatrixReduced, y[0:24999], test_size=0.4, random_state=0) #fix this
 
 #Machine Learning part
 #Support vector machine model
@@ -109,11 +110,9 @@ fpr, tpr, thresholds = metrics.roc_curve(y_test, predictionFromDataset2)
 predictionProbability = metrics.auc(fpr, tpr)
 
 #Predict images from the test set
-
-
 #Train the model with full data set
 clf = svm.SVC(probability = True, verbose = True)
-clf.fit(trainMatrixReduced, y)
+clf.fit(trainMatrixReduced, y[0:24999]) #fix this
 
 #Prediction
 #predictionFromTest = clf.predict_proba(testMatrixReduced)
@@ -126,7 +125,7 @@ predictionsToCsv = np.column_stack((idVector, predictionFromTest))
 
 import csv
 
-ofile = open('predictionI.csv', "wb")
+ofile = open('predictionII.csv', "wb")
 fileToBeWritten = csv.writer(ofile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
 
 for row in predictionsToCsv:
