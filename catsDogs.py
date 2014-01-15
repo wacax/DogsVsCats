@@ -41,7 +41,7 @@ mTest = 12500 #number of images in the test set
 indexesIm = np.random.permutation(m * len(labels) + len(labels))
 idxImages = np.tile(range(m + 1), len(labels))
 idxImages = idxImages[indexesIm]
-testIndexes = range(len(indexesIm) - 1, len(indexesIm) + mTest)
+testIndexes = range(len(indexesIm), len(indexesIm) + mTest)
 y = np.append(np.tile(0, m + 1), np.tile(1, m + 1))
 y = y[indexesIm]
 
@@ -59,9 +59,8 @@ bigMatrix = lil_matrix((len(indexesIm) + len(testIndexes), desiredDimensions[0] 
 for i in range(len(indexesIm)):
     bigMatrix[i, :] = preprocessImg(animalInput(y[i]), idxImages[i], desiredDimensions[0], desiredDimensions[1], dataTrainDir)
 
-derp = range(1, (mTest + 1))
-for ii in derp:
-    bigMatrix[testIndexes[ii], :] = preprocessImg(animalInput('printNothing'), ii, desiredDimensions[0], desiredDimensions[1], dataTestDir)
+for ii in range(mTest):
+    bigMatrix[testIndexes[ii], :] = preprocessImg(animalInput('printNothing'), ii + 1, desiredDimensions[0], desiredDimensions[1], dataTestDir)
 
 #Transform to csr matrix
 bigMatrix = bigMatrix.tocsr()
