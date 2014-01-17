@@ -98,21 +98,21 @@ X_train, X_test, y_train, y_test = cross_validation.train_test_split(
 #random grid search of hiperparameters
 
 #create a classifier
-clf = svm.SVC(probability = True, verbose = True)
+clf = svm.SVC(verbose = True)
 
 # specify parameters and distributions to sample from
 params2Test = {'C': expon(scale=100), 'gamma': expon(scale=.1),
-  'kernel': ['rbf'], 'class_weight':['auto', None]}
+  'kernel': ['rbf'], 'class_weight':['auto']}
 
 #run randomized search
-n_iter_search = 20
+n_iter_search = 5
 random_search = RandomizedSearchCV(clf, param_distributions = params2Test, n_iter = n_iter_search)
 
 start = time()
 random_search.fit(X_train, y_train)
 print("RandomizedSearchCV took %.2f seconds for %d candidates"
       " parameter settings." % ((time() - start), n_iter_search))
-random_search.grid_scores_
+type(random_search.grid_scores_)
 
 #Machine Learning part
 #Support vector machine model
@@ -134,7 +134,7 @@ predictionProbability = metrics.auc(fpr, tpr)
 
 #Predict images from the test set
 #Train the model with full data set
-clf = svm.SVC(probability = True, verbose = True)
+clf = svm.SVC(verbose = True)
 clf.fit(trainMatrixReduced, y[0:24999]) #fix this
 
 #Prediction
