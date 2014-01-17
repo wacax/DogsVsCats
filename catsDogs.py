@@ -75,15 +75,17 @@ pca.fit(bigMatrix)
 varianceExplained = pca.explained_variance_ratio_
 print(pca.explained_variance_ratio_)
 
-variance = 0
-for ii in range(len(varianceExplained)):
-    variance += varianceExplained[ii]
-    if variance > 0.99:
-        componentIdx = ii
-        break
+def anonFunOne(vector):
+    variance = 0
+    for ii in range(len(vector)):
+            variance += vector[ii]
+            if variance > 0.99:
+                componentIdx = ii
+                return(componentIdx)
+            break
 
 pca = RandomizedPCA(n_components=150, whiten = True)
-BigMatrixReduced = pca.fit_transform(bigMatrix, y = componentIdx)
+BigMatrixReduced = pca.fit_transform(bigMatrix, y = anonFunOne(varianceExplained))
 
 #Divide train Matrix and Test Matrix (for which I don't have labels)
 trainMatrixReduced = BigMatrixReduced[0:max(indexesIm), :]
