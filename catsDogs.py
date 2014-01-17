@@ -8,10 +8,13 @@ import os
 import cv2
 import numpy as np
 from scipy.sparse import lil_matrix
+from scipy.stats import expon
 from sklearn.decomposition import RandomizedPCA
 from sklearn import cross_validation
 from sklearn import svm
 from sklearn import metrics
+from time import time
+from sklearn.grid_search import RandomizedSearchCV
 
 wd = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/' #change this to make the code work
 dataTrainDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/train/'
@@ -20,7 +23,7 @@ dataTestDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/te
 os.chdir(wd)
 
 labels = ['cat.', 'dog.']
-desiredDimensions = [20, 20]
+desiredDimensions = [30, 30]
 
 #define loading and pre-processing function grayscale
 def preprocessImg(animal, number, dim1, dim2, dataDir):
@@ -33,7 +36,7 @@ def preprocessImg(animal, number, dim1, dim2, dataDir):
     npImage = cv2.resize(npImage, (dim1, dim2))
     return(npImage.reshape(1, dim1 * dim2))
 
-#m = 5000 #pet Train dataset
+#m = 1000 #pet Train dataset
 m = 12500 #full Train dataset
 mTest = 12500 #number of images in the test set
 
@@ -90,9 +93,27 @@ testMatrixReduced = BigMatrixReduced[testIndexes[0]:BigMatrixReduced.shape[0], :
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(
     trainMatrixReduced, y[0:24999], test_size=0.4, random_state=0) #fix this
 
+#random grid search of hiperparameters
+
+#create a classifier
+clf = svm.SVC(probability = True, verbose = True)
+
+# specify parameters and distributions to sample from
+params2Test = {'C': expon(scale=100), 'gamma': expon(scale=.1),
+  'kernel': ['rbf'], 'class_weight':['auto', None]}
+
+#run randomized search
+n_iter_search = 20
+random_search = RandomizedSearchCV(clf, param_distributions = params2Test, n_iter = n_iter_search)
+
+start = time()
+random_search.fit(X_train, y_train)
+print("RandomizedSearchCV took %.2f seconds for %d candidates"
+      " parameter settings." % ((time() - start), n_iter_search))
+random_search.grid_scores_
+
 #Machine Learning part
 #Support vector machine model
-clf = svm.SVC(probability = True, verbose = True)
 clf.fit(X_train, y_train)
 
 #prediction
@@ -125,7 +146,7 @@ predictionsToCsv = np.column_stack((idVector, predictionFromTest))
 
 import csv
 
-ofile = open('predictionII.csv', "wb")
+ofile = open('predictionIII.csv', "wb")
 fileToBeWritten = csv.writer(ofile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
 
 for row in predictionsToCsv:
