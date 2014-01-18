@@ -105,7 +105,7 @@ params2Test = {'C': expon(scale=100), 'gamma': expon(scale=.1),
   'kernel': ['rbf'], 'class_weight':['auto']}
 
 #run randomized search
-n_iter_search = 5
+n_iter_search = 20
 random_search = RandomizedSearchCV(clf, param_distributions = params2Test, n_iter = n_iter_search)
 
 start = time()
@@ -134,7 +134,7 @@ predictionProbability = metrics.auc(fpr, tpr)
 
 #Predict images from the test set
 #Train the model with full data set
-clf = svm.SVC(verbose = True)
+clf = svm.SVC(C = 8.143206197664762, gamma = 0.07683491868651354, kernel = 'rbf', class_weight = 'auto', verbose = True)
 clf.fit(trainMatrixReduced, y[0:24999]) #fix this
 
 #Prediction
