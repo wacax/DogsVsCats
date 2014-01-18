@@ -111,7 +111,7 @@ params2Test = [{'C': [1, 10, 100, 1000], 'kernel': ['linear']}, {'C': [1, 10, 10
 #run randomized search
 #n_iter_search = 20
 #random_search = RandomizedSearchCV(clf, param_distributions = params2Test, n_iter = n_iter_search)
-grid_search = GridSearchCV(clf, param_distributions = params2Test)
+grid_search = GridSearchCV(clf, param_grid = params2Test)
 
 start = time()
 #random_search.fit(X_train, y_train)
