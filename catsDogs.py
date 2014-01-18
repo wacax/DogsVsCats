@@ -15,6 +15,8 @@ from sklearn import svm
 from sklearn import metrics
 from time import time
 from sklearn.grid_search import RandomizedSearchCV
+from sklearn.grid_search  import GridSearchCV
+
 
 wd = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/' #change this to make the code work
 dataTrainDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/train/'
@@ -101,18 +103,25 @@ X_train, X_test, y_train, y_test = cross_validation.train_test_split(
 clf = svm.SVC(verbose = True)
 
 # specify parameters and distributions to sample from
-params2Test = {'C': expon(scale=100), 'gamma': expon(scale=.1),
-  'kernel': ['rbf'], 'class_weight':['auto']}
+#params2Test = {'C': expon(scale=100), 'gamma': expon(scale=.1),
+#  'kernel': ['rbf'], 'class_weight':['auto']}
+params2Test = [{'C': [1, 10, 100, 1000], 'kernel': ['linear']}, {'C': [1, 10, 100, 1000], 'gamma': [0.001, 0.0001], 'kernel': ['rbf']}]
+
 
 #run randomized search
-n_iter_search = 20
-random_search = RandomizedSearchCV(clf, param_distributions = params2Test, n_iter = n_iter_search)
+#n_iter_search = 20
+#random_search = RandomizedSearchCV(clf, param_distributions = params2Test, n_iter = n_iter_search)
+grid_search = GridSearchCV(clf, param_distributions = params2Test)
 
 start = time()
-random_search.fit(X_train, y_train)
-print("RandomizedSearchCV took %.2f seconds for %d candidates"
-      " parameter settings." % ((time() - start), n_iter_search))
-type(random_search.grid_scores_)
+#random_search.fit(X_train, y_train)
+grid_search.fit(X_train, y_train)
+#print("RandomizedSearchCV took %.2f seconds for %d candidates"
+#     " parameter settings." % ((time() - start), n_iter_search))
+#type(random_search.grid_scores_)
+print("GridSearchCV took %.2f seconds for %d candidate parameter settings." % (time() - start, len(grid_search.grid_scores_)))
+type(grid_search)
+grid_search.grid_scores_
 
 #Machine Learning part
 #Support vector machine model
@@ -134,7 +143,7 @@ predictionProbability = metrics.auc(fpr, tpr)
 
 #Predict images from the test set
 #Train the model with full data set
-clf = svm.SVC(C = 8.143206197664762, gamma = 0.07683491868651354, kernel = 'rbf', class_weight = 'auto', verbose = True)
+clf = svm.SVC(verbose = True)
 clf.fit(trainMatrixReduced, y[0:24999]) #fix this
 
 #Prediction
@@ -148,7 +157,7 @@ predictionsToCsv = np.column_stack((idVector, predictionFromTest))
 
 import csv
 
-ofile = open('predictionIII.csv', "wb")
+ofile = open('predictionIV.csv', "wb")
 fileToBeWritten = csv.writer(ofile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
 
 for row in predictionsToCsv:
