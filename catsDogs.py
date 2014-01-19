@@ -105,8 +105,7 @@ clf = svm.SVC(verbose = True)
 # specify parameters and distributions to sample from
 #params2Test = {'C': expon(scale=100), 'gamma': expon(scale=.1),
 #  'kernel': ['rbf'], 'class_weight':['auto']}
-params2Test = [{'C': [1, 10, 100, 1000], 'kernel': ['linear']}, {'C': [1, 10, 100, 1000], 'gamma': [0.001, 0.0001], 'kernel': ['rbf']}]
-
+params2Test = {'C': [1, 3, 10, 30, 100, 300], 'gamma': [0.001], 'kernel': ['rbf']}
 
 #run randomized search
 #n_iter_search = 20
@@ -115,7 +114,7 @@ grid_search = GridSearchCV(clf, param_grid = params2Test)
 
 start = time()
 #random_search.fit(X_train, y_train)
-grid_search.fit(X_train, y_train)
+grid_search.fit(trainMatrixReduced, y[0:24999])
 #print("RandomizedSearchCV took %.2f seconds for %d candidates"
 #     " parameter settings." % ((time() - start), n_iter_search))
 #type(random_search.grid_scores_)
@@ -143,7 +142,7 @@ predictionProbability = metrics.auc(fpr, tpr)
 
 #Predict images from the test set
 #Train the model with full data set
-clf = svm.SVC(verbose = True)
+clf = svm.SVC(C = 10, gamma = 0.001, kernel= 'rbf',verbose = True)
 clf.fit(trainMatrixReduced, y[0:24999]) #fix this
 
 #Prediction
