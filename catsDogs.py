@@ -13,8 +13,10 @@ from sklearn.decomposition import RandomizedPCA
 from sklearn import cross_validation
 from sklearn import svm
 from sklearn import metrics
+from sklearn import preprocessing
 from time import time
 from sklearn.grid_search  import GridSearchCV
+from sklearn.neural_network import BernoulliRBM
 
 
 wd = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/' #change this to make the code work
@@ -24,21 +26,23 @@ dataTestDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/te
 os.chdir(wd)
 
 labels = ['cat.', 'dog.']
-desiredDimensions = [40, 40]
+desiredDimensions = [30, 30]
 
 #define loading and pre-processing function grayscale
 def preprocessImg(animal, number, dim1, dim2, dataDir):
     imageName = '{0:s}{1:s}{2:d}{3:s}'.format(dataDir, animal, number, '.jpg')
     npImage = cv2.imread(imageName)
     npImage = cv2.cvtColor(npImage, cv2.COLOR_BGR2GRAY)
+    #vectorof255s =  np.tile(255., (npImage.shape[0], npImage.shape [1]))
+    #npImage = np.divide(npImage, vectorof255s)
     avg = np.mean(npImage.reshape(1, npImage.shape[0] * npImage.shape [1]))
     avg = np.tile(avg, (npImage.shape[0], npImage.shape [1]))
     npImage = npImage - avg
     npImage = cv2.resize(npImage, (dim1, dim2))
     return(npImage.reshape(1, dim1 * dim2))
 
-m = 1000 #pet Train dataset
-#m = 12500 #full Train dataset
+#m = 1000 #pet Train dataset
+m = 12500 #full Train dataset
 mTest = 12500 #number of images in the test set
 
 
@@ -67,8 +71,18 @@ someNumbers = range(mTest)
 for ii in someNumbers:
     bigMatrix[testIndexes[ii], :] = preprocessImg(animalInput('printNothing'), ii + 1, desiredDimensions[0], desiredDimensions[1], dataTestDir)
 
-#Transform to csr matrix
-bigMatrix = bigMatrix.tocsr()
+#Transform to csr matrix and standarize
+#bigMatrix = bigMatrix.tocsr()
+#bigMatrix = preprocessing.scale(bigMatrix, with_mean=False)
+min_max_scaler = preprocessing.MinMaxScaler()
+bigMatrix = min_max_scaler.fit_transform(bigMatrix)
+
+#extract features with neural nets (Restricted Boltzmann Machine)
+#RBM = BernoulliRBM(verbose = True)
+#RBM.learning_rate = 0.06
+#RBM.n_iter = 20
+#RBM.n_components = 100
+#RBM.fit(bigMatrix.todense())
 
 #Reduce features to main components so that they contain 99% of variance
 pca = RandomizedPCA(n_components=250, whiten = True)
@@ -85,7 +99,7 @@ def anonFunOne(vector):
                 return(componentIdx)
             break
 
-pca = RandomizedPCA(n_components=150, whiten = True)
+pca = RandomizedPCA(n_components=250, whiten = True)
 BigMatrixReduced = pca.fit_transform(bigMatrix, y = anonFunOne(varianceExplained))
 
 #Divide train Matrix and Test Matrix (for which I don't have labels)
