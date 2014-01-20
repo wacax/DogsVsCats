@@ -71,18 +71,17 @@ someNumbers = range(mTest)
 for ii in someNumbers:
     bigMatrix[testIndexes[ii], :] = preprocessImg(animalInput('printNothing'), ii + 1, desiredDimensions[0], desiredDimensions[1], dataTestDir)
 
-#Transform to csr matrix and standarize
-#bigMatrix = bigMatrix.tocsr()
-#bigMatrix = preprocessing.scale(bigMatrix, with_mean=False)
-min_max_scaler = preprocessing.MinMaxScaler()
-bigMatrix = min_max_scaler.fit_transform(bigMatrix)
+#Transform to csr matrix and standarization
+bigMatrix = bigMatrix.tocsr()
+bigMatrix = preprocessing.scale(bigMatrix, with_mean=False)
 
 #extract features with neural nets (Restricted Boltzmann Machine)
 #RBM = BernoulliRBM(verbose = True)
 #RBM.learning_rate = 0.06
 #RBM.n_iter = 20
 #RBM.n_components = 100
-#RBM.fit(bigMatrix.todense())
+#min_max_scaler = preprocessing.MinMaxScaler()
+#RBM.fit(min_max_scaler.fit_transform((bigMatrix.todense()))
 
 #Reduce features to main components so that they contain 99% of variance
 pca = RandomizedPCA(n_components=250, whiten = True)
@@ -95,23 +94,20 @@ def anonFunOne(vector):
     for ii in range(len(vector)):
             variance += vector[ii]
             if variance > 0.99:
-                componentIdx = ii
-                return(componentIdx)
-            break
+                return (ii)
+                break
 
-pca = RandomizedPCA(n_components=250, whiten = True)
-BigMatrixReduced = pca.fit_transform(bigMatrix, y = anonFunOne(varianceExplained))
+bigMatrix = pca.fit_transform(bigMatrix, y = anonFunOne(varianceExplained))
 
 #Divide train Matrix and Test Matrix (for which I don't have labels)
-trainMatrixReduced = BigMatrixReduced[0:max(indexesIm), :]
-testMatrixReduced = BigMatrixReduced[testIndexes[0]:BigMatrixReduced.shape[0], :]
+trainMatrixReduced = bigMatrix[0:max(indexesIm), :]
+testMatrixReduced = bigMatrix[testIndexes[0]:bigMatrix.shape[0], :]
 
 #Divide dataset for cross validation purposes
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(
     trainMatrixReduced, y[0:24999], test_size=0.4, random_state=0) #fix this
 
 #random grid search of hiperparameters
-
 #create a classifier
 clf = svm.SVC(verbose = True)
 
