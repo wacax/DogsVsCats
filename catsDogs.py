@@ -14,7 +14,6 @@ from sklearn import cross_validation
 from sklearn import svm
 from sklearn import metrics
 from time import time
-from sklearn.grid_search import RandomizedSearchCV
 from sklearn.grid_search  import GridSearchCV
 
 
@@ -25,7 +24,7 @@ dataTestDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/te
 os.chdir(wd)
 
 labels = ['cat.', 'dog.']
-desiredDimensions = [30, 30]
+desiredDimensions = [40, 40]
 
 #define loading and pre-processing function grayscale
 def preprocessImg(animal, number, dim1, dim2, dataDir):
@@ -38,8 +37,8 @@ def preprocessImg(animal, number, dim1, dim2, dataDir):
     npImage = cv2.resize(npImage, (dim1, dim2))
     return(npImage.reshape(1, dim1 * dim2))
 
-#m = 1000 #pet Train dataset
-m = 12500 #full Train dataset
+m = 1000 #pet Train dataset
+#m = 12500 #full Train dataset
 mTest = 12500 #number of images in the test set
 
 
@@ -72,7 +71,7 @@ for ii in someNumbers:
 bigMatrix = bigMatrix.tocsr()
 
 #Reduce features to main components so that they contain 99% of variance
-pca = RandomizedPCA(n_components=150, whiten = True)
+pca = RandomizedPCA(n_components=250, whiten = True)
 pca.fit(bigMatrix)
 varianceExplained = pca.explained_variance_ratio_
 print(pca.explained_variance_ratio_)
@@ -103,21 +102,13 @@ X_train, X_test, y_train, y_test = cross_validation.train_test_split(
 clf = svm.SVC(verbose = True)
 
 # specify parameters and distributions to sample from
-#params2Test = {'C': expon(scale=100), 'gamma': expon(scale=.1),
-#  'kernel': ['rbf'], 'class_weight':['auto']}
 params2Test = {'C': [1, 3, 10, 30, 100, 300], 'gamma': [0.001], 'kernel': ['rbf']}
 
 #run randomized search
-#n_iter_search = 20
-#random_search = RandomizedSearchCV(clf, param_distributions = params2Test, n_iter = n_iter_search)
 grid_search = GridSearchCV(clf, param_grid = params2Test)
 
 start = time()
-#random_search.fit(X_train, y_train)
 grid_search.fit(trainMatrixReduced, y[0:24999])
-#print("RandomizedSearchCV took %.2f seconds for %d candidates"
-#     " parameter settings." % ((time() - start), n_iter_search))
-#type(random_search.grid_scores_)
 print("GridSearchCV took %.2f seconds for %d candidate parameter settings." % (time() - start, len(grid_search.grid_scores_)))
 type(grid_search)
 grid_search.grid_scores_
@@ -156,7 +147,7 @@ predictionsToCsv = np.column_stack((idVector, predictionFromTest))
 
 import csv
 
-ofile = open('predictionIV.csv', "wb")
+ofile = open('predictionVI.csv', "wb")
 fileToBeWritten = csv.writer(ofile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
 
 for row in predictionsToCsv:
