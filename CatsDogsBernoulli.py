@@ -68,20 +68,32 @@ someNumbers = range(mTest)
 for ii in someNumbers:
     bigMatrixTest[ii, :] = preprocessImg(animalInput('printNothing'), ii + 1, desiredDimensions[0], desiredDimensions[1], dataTestDir)
 
+#Divide dataset for cross validation purposes
+X_train, X_test, y_train, y_test = cross_validation.train_test_split(
+    bigMatrixTrain, y, test_size = 0.4, random_state = 0) #fix this
+
 #extract features with neural nets (Restricted Boltzmann Machine)
 rbm = BernoulliRBM(verbose = True)
 rbm.learning_rate = 0.06
 rbm.n_iter = 20
 rbm.n_components = 100
-bigMatrix = rbm.fit(bigMatrix)
+rbm.fit(bigMatrixTrain)
+
+X_train = rbm.fit_transform(X_train)
+X_test = rbm.fit_transform(X_test)
+
+model = svm.SVC(C = 10, gamma = 0.001, kernel= 'rbf', verbose=True)
+model.fit(X_train, y=y_train)
+predictionRVM = model.predict(X_test)
+
+correctValues = sum(predictionRVM == y_test)
+percentage = float(correctValues)/len(y_test)
+
+print(percentage)
 
 #Divide train Matrix and Test Matrix (for which I don't have labels)
 trainMatrixReduced = bigMatrix[0:max(indexesIm), :]
 testMatrixReduced = bigMatrix[testIndexes[0]:bigMatrix.shape[0], :]
-
-#Divide dataset for cross validation purposes
-X_train, X_test, y_train, y_test = cross_validation.train_test_split(
-    trainMatrixReduced, y[0:24999], test_size=0.4, random_state=0) #fix this
 
 #random grid search of hiperparameters
 #create a classifier
