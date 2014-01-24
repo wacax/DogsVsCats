@@ -16,7 +16,7 @@ from time import time
 from sklearn.grid_search  import GridSearchCV
 from sklearn.neural_network import BernoulliRBM
 from sklearn.preprocessing import StandardScaler
-
+from sklearn import linear_model
 
 wd = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/' #change this to make the code work
 dataTrainDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/train/'
@@ -75,16 +75,17 @@ X_train, X_test, y_train, y_test = cross_validation.train_test_split(
 #extract features with neural nets (Restricted Boltzmann Machine)
 rbm = BernoulliRBM(verbose = True)
 rbm.learning_rate = 0.06
-rbm.n_iter = 20
+rbm.n_iter = 200
 rbm.n_components = 100
 rbm.fit(bigMatrixTrain)
 
 X_train = rbm.fit_transform(X_train)
 X_test = rbm.fit_transform(X_test)
 
-model = svm.SVC(C = 10, gamma = 0.001, kernel= 'rbf', verbose=True)
-model.fit(X_train, y=y_train)
-predictionRVM = model.predict(X_test)
+#model = svm.SVC(C = 10, gamma = 0.001, kernel= 'rbf', verbose=True)
+logisticmodel = linear_model.LogisticRegression()
+logisticmodel.fit(X_train, y=y_train)
+predictionRVM = logisticmodel.predict(X_test)
 
 correctValues = sum(predictionRVM == y_test)
 percentage = float(correctValues)/len(y_test)
