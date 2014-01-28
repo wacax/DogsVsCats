@@ -17,6 +17,9 @@ from sklearn.grid_search  import GridSearchCV
 from sklearn.neural_network import BernoulliRBM
 from sklearn.preprocessing import StandardScaler
 from sklearn import linear_model
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+from sklearn.pipeline import Pipeline
 
 wd = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/' #change this to make the code work
 dataTrainDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/train/'
@@ -25,17 +28,19 @@ dataTestDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/te
 os.chdir(wd)
 
 labels = ['cat.', 'dog.']
-desiredDimensions = [30, 30]
+desiredDimensions = [45, 45]
 
 #define loading and pre-processing function grayscale
 def preprocessImg(animal, number, dim1, dim2, dataDir):
     imageName = '{0:s}{1:s}{2:d}{3:s}'.format(dataDir, animal, number, '.jpg')
     npImage = cv2.imread(imageName)
     npImage = cv2.cvtColor(npImage, cv2.COLOR_BGR2GRAY)
-    vectorof255s =  np.tile(255., (npImage.shape[0], npImage.shape [1]))
-    npImage = np.divide(npImage, vectorof255s)
+    avg = np.mean(npImage.reshape(1, npImage.shape[0] * npImage.shape [1]))
+    avg = np.tile(avg, (npImage.shape[0], npImage.shape [1]))
+    npImage = npImage - avg
     npImage = cv2.resize(npImage, (dim1, dim2))
     return(npImage.reshape(1, dim1 * dim2))
+
 
 #m = 1000 #pet Train dataset
 m = 12500 #full Train dataset
@@ -72,57 +77,115 @@ for ii in someNumbers:
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(
     bigMatrixTrain, y, test_size = 0.4, random_state = 0) #fix this
 
-#extract features with neural nets (Restricted Boltzmann Machine)
-rbm = BernoulliRBM(verbose = True)
-rbm.learning_rate = 0.06
-rbm.n_iter = 200
-rbm.n_components = 100
-rbm.fit(bigMatrixTrain)
+#Reduce features to main components so that they contain 99% of variance
+n_components = 250
 
-X_train = rbm.fit_transform(X_train)
-X_test = rbm.fit_transform(X_test)
+print("Extracting the top %d eigenfaces from %d faces"
+      % (n_components, X_train.shape[0]))
+t0 = time()
+pca = RandomizedPCA(n_components = n_components, whiten = True)
+pca.fit(X_train)
+print("done in %0.3fs" % (time() - t0))
 
-#model = svm.SVC(C = 10, gamma = 0.001, kernel= 'rbf', verbose=True)
-logisticmodel = linear_model.LogisticRegression()
-logisticmodel.fit(X_train, y=y_train)
-predictionRVM = logisticmodel.predict(X_test)
+print("Projecting the input data on the eigenfaces orthonormal basis")
+t0 = time()
+X_train = pca.transform(X_train)
+X_test = pca.transform(X_test)
+print("done in %0.3fs" % (time() - t0))
 
-correctValues = sum(predictionRVM == y_test)
+# Train a SVM classification model
+print("Fitting the classifier to the training set")
+t0 = time()
+param_grid = {'C': [1e3, 1e4, 1e5],
+              'gamma': [0.0001,0.001, 0.01, 0.1], }
+clf = GridSearchCV(svm.SVC(kernel='rbf', class_weight='auto', verbose = True), param_grid)
+clf = clf.fit(X_train, y_train)
+print("done in %0.3fs" % (time() - t0))
+print("Best estimator found by grid search:")
+print(clf.best_estimator_)
+
+# Quantitative evaluation of the model quality on the test set
+print("Predicting people's names on the test set")
+t0 = time()
+prediction = clf.predict(X_test)
+print("done in %0.3fs" % (time() - t0))
+
+print(classification_report(y_test, prediction))
+print(confusion_matrix(y_test, prediction))
+
+correctValues = sum(prediction == y_test)
 percentage = float(correctValues)/len(y_test)
 
 print(percentage)
 
-#Divide train Matrix and Test Matrix (for which I don't have labels)
-trainMatrixReduced = bigMatrix[0:max(indexesIm), :]
-testMatrixReduced = bigMatrix[testIndexes[0]:bigMatrix.shape[0], :]
-
-#random grid search of hiperparameters
-#create a classifier
-clf = svm.SVC(verbose = True)
+#mmodel number 2
+bigMatrixTrain = (bigMatrixTrain - np.min(bigMatrixTrain, 0)) / (np.max(bigMatrixTrain, 0) + 0.0001)  # 0-1 scaling
+#Divide dataset for cross validation purposes
+X_train, X_test, y_train, y_test = cross_validation.train_test_split(
+    bigMatrixTrain, y, test_size = 0.4, random_state = 0) #fix this
 
 # specify parameters and distributions to sample from
-params2Test = {'C': [1, 10, 100, 1000], 'gamma': [0.001, 0.0001], 'kernel': ['rbf']}
+# Models we will use
+logistic = linear_model.LogisticRegression()
+rbm = BernoulliRBM(random_state=0, verbose=True)
 
-#run randomized search
-grid_search = GridSearchCV(clf, param_grid = params2Test)
+classifier = Pipeline(steps=[('rbm', rbm), ('logistic', logistic)])
+rbm.learning_rate = 0.06
+rbm.n_iter = 20
+# More components tend to give better prediction performance, but larger fitting time
+rbm.n_components = 300
+logistic.C = 6000.0
 
-start = time()
-grid_search.fit(trainMatrixReduced, y[0:24999])
-print("GridSearchCV took %.2f seconds for %d candidate parameter settings." % (time() - start, len(grid_search.grid_scores_)))
-type(grid_search)
-grid_search.grid_scores_
+# Training RBM-Logistic Pipeline
+classifier.fit(X_train, y_train)
 
-#Machine Learning part
-#Support vector machine model
-clf.fit(X_train, y_train)
+print()
+print("Logistic regression using RBM features:\n%s\n" % (
+    metrics.classification_report(y_test, classifier.predict(X_test))))
+print("Logistic regression using RBM features:\n%s\n" % (
+    confusion_matrix(y_test, classifier.predict(X_test))))
 
-#prediction
-predictionFromDataset = clf.predict(X_test)
 
-correctValues = sum(predictionFromDataset == y_test)
-percentage = float(correctValues)/len(y_test)
+#mmodel number 3
+#Divide dataset for cross validation purposes
+X_train, X_test, y_train, y_test = cross_validation.train_test_split(
+    bigMatrixTrain, y, test_size = 0.4, random_state = 0) #fix this
 
-print(percentage)
+# specify parameters and distributions to sample from
+# Models we will use
+logistic = linear_model.LogisticRegression()
+rbm = BernoulliRBM(random_state=0, verbose=True)
+
+classifier = Pipeline(steps=[('rbm', rbm), ('logistic', logistic)])
+rbm.learning_rate = 0.06
+rbm.n_iter = 20
+# More components tend to give better prediction performance, but larger fitting time
+rbm.n_components = 300
+logistic.C = 6000.0
+
+n_components = 250
+
+print("Extracting the top %d eigenfaces from %d faces"
+      % (n_components, X_train.shape[0]))
+t0 = time()
+pca = RandomizedPCA(n_components = n_components, whiten = True)
+pca.fit(X_train)
+print("done in %0.3fs" % (time() - t0))
+
+X_train = pca.transform(X_train)
+X_test = pca.transform(X_test)
+
+bigMatrixTrain = (np.row_stack(X_train, X_test) - np.min(np.row_stack(X_train, X_test), 0)) / (np.max(np.row_stack(X_train, X_test), 0) + 0.0001)  # 0-1 scaling
+
+# Training RBM-Logistic Pipeline
+classifier.fit(X_train, y_train)
+
+print()
+print("Logistic regression using RBM features:\n%s\n" % (
+    metrics.classification_report(y_test, classifier.predict(X_test))))
+print("Logistic regression using RBM features:\n%s\n" % (
+    confusion_matrix(y_test, classifier.predict(X_test))))
+
 
 #prediction probability
 predictionFromDataset2 = clf.predict_proba(X_test)
@@ -130,14 +193,9 @@ predictionFromDataset2 = predictionFromDataset2[:, 1]
 fpr, tpr, thresholds = metrics.roc_curve(y_test, predictionFromDataset2)
 predictionProbability = metrics.auc(fpr, tpr)
 
-#Predict images from the test set
-#Train the model with full data set
-clf = svm.SVC(C = 10, gamma = 0.001, kernel= 'rbf',verbose = True)
-clf.fit(trainMatrixReduced, y[0:24999]) #fix this
-
 #Prediction
 #predictionFromTest = clf.predict_proba(testMatrixReduced)
-predictionFromTest = clf.predict(testMatrixReduced)
+predictionFromTest = clf.predict(bigMatrixTest)
 #label = predictionFromTest[:, 1]
 idVector = range(1, mTest + 1)
 
