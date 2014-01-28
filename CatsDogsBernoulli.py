@@ -176,6 +176,8 @@ X_train = pca.transform(X_train)
 X_test = pca.transform(X_test)
 
 bigMatrixTrain = (np.row_stack(X_train, X_test) - np.min(np.row_stack(X_train, X_test), 0)) / (np.max(np.row_stack(X_train, X_test), 0) + 0.0001)  # 0-1 scaling
+X_train = bigMatrixTrain[0:X_train.shape[0], :]
+X_test = bigMatrixTrain[X_train.shape[0] + 1 :bigMatrixTrain.shape[0], :]
 
 # Training RBM-Logistic Pipeline
 classifier.fit(X_train, y_train)
