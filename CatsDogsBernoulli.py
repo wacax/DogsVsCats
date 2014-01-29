@@ -28,7 +28,7 @@ dataTestDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/te
 os.chdir(wd)
 
 labels = ['cat.', 'dog.']
-desiredDimensions = [45, 45]
+desiredDimensions = [55, 55]
 
 #define loading and pre-processing function grayscale
 def preprocessImg(animal, number, dim1, dim2, dataDir):
