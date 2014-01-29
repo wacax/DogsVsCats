@@ -35,9 +35,11 @@ def preprocessImg(animal, number, dim1, dim2, dataDir):
     imageName = '{0:s}{1:s}{2:d}{3:s}'.format(dataDir, animal, number, '.jpg')
     npImage = cv2.imread(imageName)
     npImage = cv2.cvtColor(npImage, cv2.COLOR_BGR2GRAY)
-    avg = np.mean(npImage.reshape(1, npImage.shape[0] * npImage.shape [1]))
-    avg = np.tile(avg, (npImage.shape[0], npImage.shape [1]))
-    npImage = npImage - avg
+    vectorof255s =  np.tile(255., (npImage.shape[0], npImage.shape [1]))
+    npImage = np.divide(npImage, vectorof255s)
+    #avg = np.mean(npImage.reshape(1, npImage.shape[0] * npImage.shape [1]))
+    #avg = np.tile(avg, (npImage.shape[0], npImage.shape [1]))
+    #npImage = npImage - avg
     npImage = cv2.resize(npImage, (dim1, dim2))
     return(npImage.reshape(1, dim1 * dim2))
 
@@ -129,21 +131,50 @@ X_train, X_test, y_train, y_test = cross_validation.train_test_split(
 logistic = linear_model.LogisticRegression()
 rbm = BernoulliRBM(random_state=0, verbose=True)
 
-classifier = Pipeline(steps=[('rbm', rbm), ('logistic', logistic)])
+#classifier = Pipeline(steps=[('rbm', rbm), ('logistic', logistic)])
 rbm.learning_rate = 0.06
 rbm.n_iter = 20
 # More components tend to give better prediction performance, but larger fitting time
 rbm.n_components = 300
+X_train = rbm.fit_transform(X_train)
+X_test = rbm.transform(X_test)
+
+# Train a logistic model
+print("Fitting the classifier to the training set")
+t0 = time()
+param_grid = {'C': [10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000]}
+logisticModel = GridSearchCV(logistic(verbose = True), param_grid)
+logisticModel = logisticModel.fit(X_train, y_train)
+print("done in %0.3fs" % (time() - t0))
+print("Best estimator found by grid search:")
+print(logisticModel.best_estimator_)
+
 logistic.C = 6000.0
 
+# Train a SVM classification model
+#print("Fitting the classifier to the training set")
+#t0 = time()
+#param_grid = {'logistic.C': [10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000]}
+#clf = GridSearchCV(classifier(verbose = True), param_grid)
+#clf = clf.fit(X_train, y_train)
+#print("done in %0.3fs" % (time() - t0))
+#print("Best estimator found by grid search:")
+#print(clf.best_estimator_)
+
 # Training RBM-Logistic Pipeline
-classifier.fit(X_train, y_train)
+#classifier.fit(X_train, y_train)
+
+#print()
+#print("Logistic regression using RBM features:\n%s\n" % (
+#    metrics.classification_report(y_test, classifier.predict(X_test))))
+#print("Logistic regression using RBM features:\n%s\n" % (
+#    confusion_matrix(y_test, classifier.predict(X_test))))
 
 print()
 print("Logistic regression using RBM features:\n%s\n" % (
-    metrics.classification_report(y_test, classifier.predict(X_test))))
+    metrics.classification_report(y_test, clf.predict(X_test))))
 print("Logistic regression using RBM features:\n%s\n" % (
-    confusion_matrix(y_test, classifier.predict(X_test))))
+    confusion_matrix(y_test, clf.predict(X_test))))
 
 
 #mmodel number 3
