@@ -24,28 +24,41 @@ from sklearn.pipeline import Pipeline
 wd = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/' #change this to make the code work
 dataTrainDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/train/'
 dataTestDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/test1/'
+dataExtraDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/extraImages/'
 
 os.chdir(wd)
 
 labels = ['cat.', 'dog.']
-desiredDimensions = [55, 55]
+desiredDimensions = [25, 25]
+
+#Get names of training image files
+path, dirs, trainImageNames = os.walk(dataExtraDir).next()
+mExtra = len(trainImageNames)
 
 #define loading and pre-processing function grayscale
+#def preprocessImg(animal, number, dim1, dim2, dataDir):
+#    imageName = '{0:s}{1:s}{2:d}{3:s}'.format(dataDir, animal, number, '.jpg')
+#    npImage = cv2.imread(imageName)
+#    npImage = cv2.cvtColor(npImage, cv2.COLOR_BGR2GRAY)
+#    vectorof255s =  np.tile(255., (npImage.shape[0], npImage.shape [1]))
+#    npImage = np.divide(npImage, vectorof255s)
+#    #avg = np.mean(npImage.reshape(1, npImage.shape[0] * npImage.shape [1]))
+#    #avg = np.tile(avg, (npImage.shape[0], npImage.shape [1]))
+#    #npImage = npImage - avg
+#    npImage = cv2.resize(npImage, (dim1, dim2))
+#    return(npImage.reshape(1, dim1 * dim2))
+
+#define loading and pre-processing function in color
 def preprocessImg(animal, number, dim1, dim2, dataDir):
     imageName = '{0:s}{1:s}{2:d}{3:s}'.format(dataDir, animal, number, '.jpg')
     npImage = cv2.imread(imageName)
-    npImage = cv2.cvtColor(npImage, cv2.COLOR_BGR2GRAY)
-    vectorof255s =  np.tile(255., (npImage.shape[0], npImage.shape [1]))
+    vectorof255s =  np.tile(255., (npImage.shape[0], npImage.shape [1], 3))
     npImage = np.divide(npImage, vectorof255s)
-    #avg = np.mean(npImage.reshape(1, npImage.shape[0] * npImage.shape [1]))
-    #avg = np.tile(avg, (npImage.shape[0], npImage.shape [1]))
-    #npImage = npImage - avg
     npImage = cv2.resize(npImage, (dim1, dim2))
-    return(npImage.reshape(1, dim1 * dim2))
+    return(npImage.reshape(1, dim1 * dim2 * 3))
 
-
-#m = 1000 #pet Train dataset
-m = 12500 #full Train dataset
+m = 1000 #pet Train dataset
+#m = 12500 #full Train dataset
 mTest = 12500 #number of images in the test set
 
 
@@ -65,8 +78,9 @@ def animalInput(theNumber):
         return ''
 
 #Build the sparse matrix with the preprocessed image data for both train and test data
-bigMatrixTrain = np.empty(shape=(((len(indexesIm), desiredDimensions[0] * desiredDimensions[1]))))
-bigMatrixTest = np.empty(shape=(((len(testIndexes), desiredDimensions[0] * desiredDimensions[1]))))
+bigMatrixTrain = np.empty(shape=(((len(indexesIm), desiredDimensions[0] * desiredDimensions[1] * 3))))
+bigMatrixTest = np.empty(shape=(((len(testIndexes), desiredDimensions[0] * desiredDimensions[1] * 3))))
+bigMatrixExtra = np.empty(shape=(((mExtra, desiredDimensions[0] * desiredDimensions[1] * 3))))
 
 for i in range(len(indexesIm)):
     bigMatrixTrain[i, :] = preprocessImg(animalInput(y[i]), idxImages[i], desiredDimensions[0], desiredDimensions[1], dataTrainDir)
@@ -74,6 +88,12 @@ for i in range(len(indexesIm)):
 someNumbers = range(mTest)
 for ii in someNumbers:
     bigMatrixTest[ii, :] = preprocessImg(animalInput('printNothing'), ii + 1, desiredDimensions[0], desiredDimensions[1], dataTestDir)
+
+someNumbers = range(mTest)
+for ii in someNumbers:
+    bigMatrixExtra[ii, :] = preprocessImg(animalInput('printNothing'), ii + 1, desiredDimensions[0], desiredDimensions[1], dataTestDir)
+
+bigMatrix = preprocessing.scale(bigMatrix, with_mean=False)
 
 #Divide dataset for cross validation purposes
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(
@@ -121,19 +141,18 @@ percentage = float(correctValues)/len(y_test)
 print(percentage)
 
 #mmodel number 2
-bigMatrixTrain = (bigMatrixTrain - np.min(bigMatrixTrain, 0)) / (np.max(bigMatrixTrain, 0) + 0.0001)  # 0-1 scaling
+#bigMatrixTrain = (bigMatrixTrain - np.min(bigMatrixTrain, 0)) / (np.max(bigMatrixTrain, 0) + 0.0001)  # 0-1 scaling
 #Divide dataset for cross validation purposes
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(
     bigMatrixTrain, y, test_size = 0.4, random_state = 0) #fix this
 
 # specify parameters and distributions to sample from
 # Models we will use
-logistic = linear_model.LogisticRegression()
 rbm = BernoulliRBM(random_state=0, verbose=True)
 
 #classifier = Pipeline(steps=[('rbm', rbm), ('logistic', logistic)])
-rbm.learning_rate = 0.06
-rbm.n_iter = 20
+rbm.learning_rate = 0.04
+rbm.n_iter = 30
 # More components tend to give better prediction performance, but larger fitting time
 rbm.n_components = 300
 X_train = rbm.fit_transform(X_train)
@@ -141,15 +160,16 @@ X_test = rbm.transform(X_test)
 
 # Train a logistic model
 print("Fitting the classifier to the training set")
+logisticModel = linear_model.LogisticRegression()
 t0 = time()
-param_grid = {'C': [10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000]}
-logisticModel = GridSearchCV(logistic(verbose = True), param_grid)
+param_grid = {'C': [10, 30, 100, 300, 1000]}
+logisticModel = GridSearchCV(logisticModel, param_grid = param_grid)
 logisticModel = logisticModel.fit(X_train, y_train)
 print("done in %0.3fs" % (time() - t0))
 print("Best estimator found by grid search:")
 print(logisticModel.best_estimator_)
 
-logistic.C = 6000.0
+#logistic.C = 6000.0
 
 # Train a SVM classification model
 #print("Fitting the classifier to the training set")
@@ -172,9 +192,9 @@ logistic.C = 6000.0
 
 print()
 print("Logistic regression using RBM features:\n%s\n" % (
-    metrics.classification_report(y_test, clf.predict(X_test))))
+    metrics.classification_report(y_test, logisticModel.predict(X_test))))
 print("Logistic regression using RBM features:\n%s\n" % (
-    confusion_matrix(y_test, clf.predict(X_test))))
+    confusion_matrix(y_test, logisticModel.predict(X_test))))
 
 
 #mmodel number 3
