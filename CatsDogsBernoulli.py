@@ -20,6 +20,7 @@ from sklearn import linear_model
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.pipeline import Pipeline
+from string import Template
 
 wd = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/' #change this to make the code work
 dataTrainDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/train/'
@@ -29,11 +30,20 @@ dataExtraDir = '/home/wacax/Documents/Wacax/Kaggle Data Analysis/DogsCats/Data/e
 os.chdir(wd)
 
 labels = ['cat.', 'dog.']
-desiredDimensions = [25, 25]
+desiredDimensions = [30, 30]
 
 #Get names of training image files
-path, dirs, trainImageNames = os.walk(dataExtraDir).next()
-mExtra = len(trainImageNames)
+path, dirs, ExtraImageNames = os.walk(dataExtraDir).next()
+mExtra = len(ExtraImageNames)
+
+for file in ExtraImageNames:
+  if not file.endswith('.jpg'):
+     ExtraImageNames.remove(file)
+
+mExtra = len(ExtraImageNames)
+
+#for i in range(len(ExtraImageNames)):
+#    ExtraImageNames[i] = ExtraImageNames[i].replace('.jpg', '')
 
 #define loading and pre-processing function grayscale
 #def preprocessImg(animal, number, dim1, dim2, dataDir):
@@ -57,10 +67,18 @@ def preprocessImg(animal, number, dim1, dim2, dataDir):
     npImage = cv2.resize(npImage, (dim1, dim2))
     return(npImage.reshape(1, dim1 * dim2 * 3))
 
-m = 1000 #pet Train dataset
-#m = 12500 #full Train dataset
-mTest = 12500 #number of images in the test set
+#Second function
+def preprocessImg2(nameImg, dim1, dim2, dataDir):
+    imageName = '{0:s}{1:s}'.format(dataDir, nameImg)
+    npImage = cv2.imread(imageName)
+    vectorof255s =  np.tile(255., (npImage.shape[0], npImage.shape [1], 3))
+    npImage = np.divide(npImage, vectorof255s)
+    npImage = cv2.resize(npImage, (dim1, dim2))
+    return(npImage.reshape(1, dim1 * dim2 * 3))
 
+#m = 1000 #pet Train dataset
+m = 12500 #full Train dataset
+mTest = 12500 #number of images in the test set
 
 indexesIm = np.random.permutation(m * len(labels))
 idxImages = np.tile(range(m), len(labels))
@@ -89,23 +107,18 @@ someNumbers = range(mTest)
 for ii in someNumbers:
     bigMatrixTest[ii, :] = preprocessImg(animalInput('printNothing'), ii + 1, desiredDimensions[0], desiredDimensions[1], dataTestDir)
 
-someNumbers = range(mTest)
-for ii in someNumbers:
-    bigMatrixExtra[ii, :] = preprocessImg(animalInput('printNothing'), ii + 1, desiredDimensions[0], desiredDimensions[1], dataTestDir)
+for iii in range(len(ExtraImageNames)):
+    bigMatrixExtra[iii, :] = preprocessImg2(ExtraImageNames[iii], desiredDimensions[0], desiredDimensions[1], dataExtraDir)
 
-bigMatrix = preprocessing.scale(bigMatrix, with_mean=False)
+bigMatrixTrain = preprocessing.scale(bigMatrixTrain)
 
 #Divide dataset for cross validation purposes
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(
-    bigMatrixTrain, y, test_size = 0.4, random_state = 0) #fix this
+    bigMatrixTrain, y, test_size = 0.3, random_state = 0) #fix this
 
-#Reduce features to main components so that they contain 99% of variance
-n_components = 250
-
-print("Extracting the top %d eigenfaces from %d faces"
-      % (n_components, X_train.shape[0]))
+print("Extracting top components")
 t0 = time()
-pca = RandomizedPCA(n_components = n_components, whiten = True)
+pca = RandomizedPCA(n_components = 250, whiten = True)
 pca.fit(X_train)
 print("done in %0.3fs" % (time() - t0))
 
@@ -119,7 +132,7 @@ print("done in %0.3fs" % (time() - t0))
 print("Fitting the classifier to the training set")
 t0 = time()
 param_grid = {'C': [1e3, 1e4, 1e5],
-              'gamma': [0.0001,0.001, 0.01, 0.1], }
+              'gamma': [0.0001,0.001], }
 clf = GridSearchCV(svm.SVC(kernel='rbf', class_weight='auto', verbose = True), param_grid)
 clf = clf.fit(X_train, y_train)
 print("done in %0.3fs" % (time() - t0))
